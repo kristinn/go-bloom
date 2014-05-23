@@ -47,8 +47,8 @@ func (s *redisStorage) init() (err error) {
 	return
 }
 
-func (s *redisStorage) Append(bitLocations *[]uint) {
-	s.queue = append(s.queue, *bitLocations...)
+func (s *redisStorage) Append(bit uint) {
+	s.queue = append(s.queue, bit)
 }
 
 func (s *redisStorage) Save() {
@@ -61,4 +61,15 @@ func (s *redisStorage) Save() {
 	}
 
 	conn.Do("EXEC")
+}
+
+func (s *redisStorage) Exists(bit uint) (ret bool, err error) {
+	conn := s.pool.Get()
+	defer conn.Close()
+
+	bitValue, err := redis.Int(conn.Do("GETBIT", s.key, bit))
+	if err != nil {
+		return
+	}
+	return bitValue == 1, err
 }
