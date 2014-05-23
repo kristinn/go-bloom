@@ -4,6 +4,7 @@ import (
 	"github.com/kristinn/redigo/redis"
 )
 
+// redisStorage is a struct representing the Redis backend for the bloom filter.
 type redisStorage struct {
 	pool  *redis.Pool
 	key   string
@@ -11,6 +12,7 @@ type redisStorage struct {
 	queue []uint
 }
 
+// NewRedisStorage creates a Redis backend storage to be used with the bloom filter.
 func NewRedisStorage(pool *redis.Pool, key string, size uint) (*redisStorage, error) {
 	var err error
 
@@ -32,6 +34,7 @@ func NewRedisStorage(pool *redis.Pool, key string, size uint) (*redisStorage, er
 	return &store, nil
 }
 
+// init takes care of settings every bit to 0 in the Redis bitset.
 func (s *redisStorage) init() (err error) {
 	conn := s.pool.Get()
 	defer conn.Close()
@@ -47,10 +50,12 @@ func (s *redisStorage) init() (err error) {
 	return
 }
 
+// Append appends the bit, which is to be saved, to the queue.
 func (s *redisStorage) Append(bit uint) {
 	s.queue = append(s.queue, bit)
 }
 
+// Save pushes the bits from the queue to the storage backend, assigning the value 1 in the process.
 func (s *redisStorage) Save() {
 	conn := s.pool.Get()
 	defer conn.Close()
@@ -63,6 +68,7 @@ func (s *redisStorage) Save() {
 	conn.Do("EXEC")
 }
 
+// Exists checks if the given bit exists in the Redis backend.
 func (s *redisStorage) Exists(bit uint) (ret bool, err error) {
 	conn := s.pool.Get()
 	defer conn.Close()

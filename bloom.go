@@ -1,3 +1,12 @@
+/*
+Bloom filter with Bitset and Redis backend support.
+
+Speeding things up with:
+
+- Partitioned bloom filters
+
+- Utilizing the same cheap hash function every time, but still with good results (http://www.eecs.harvard.edu/~kirsch/pubs/bbbf/rsa.pdf)
+*/
 package bloom
 
 import (
@@ -10,10 +19,12 @@ import (
 	"sync"
 )
 
+// bloomFilter holds all the storage filters.
 type bloomFilter struct {
 	filters []filter
 }
 
+// filter represents each and every storage filter. Each hash iteration (k) = 1 storage filter.
 type filter struct {
 	size       uint
 	storage    storage
@@ -21,6 +32,7 @@ type filter struct {
 	multiplier uint
 }
 
+// NewBitset creates and returns a new bloom filter using Bitset as a backend.
 func NewBitset(size, hashIter uint) *bloomFilter {
 	filters := filterSetup(size, hashIter)
 
@@ -32,6 +44,7 @@ func NewBitset(size, hashIter uint) *bloomFilter {
 	return &bloomFilter{filters}
 }
 
+// NewRedis creates and returns a new bloom filter using Redis as a backend.
 func NewRedis(pool *redis.Pool, key string, size, hashIter uint) (*bloomFilter, error) {
 	filters := filterSetup(size, hashIter)
 
@@ -49,6 +62,7 @@ func NewRedis(pool *redis.Pool, key string, size, hashIter uint) (*bloomFilter, 
 	return &bloom, nil
 }
 
+// filterSetup is a helper function to generate the required number of filters (hash iterations -> k).
 func filterSetup(size, hashIter uint) (filters []filter) {
 	partitionSize := math.Ceil(float64(size) / float64(hashIter))
 
@@ -61,6 +75,7 @@ func filterSetup(size, hashIter uint) (filters []filter) {
 	return
 }
 
+// Append is used to append a value to the queue.
 func (b *bloomFilter) Append(value []byte) {
 	for _, f := range b.filters {
 		a, b := f.hashValue(&value)
@@ -68,6 +83,7 @@ func (b *bloomFilter) Append(value []byte) {
 	}
 }
 
+// Save takes care of saving the values from the queue to the correct backend.
 func (b *bloomFilter) Save() {
 	var wg sync.WaitGroup
 	for _, f := range b.filters {
@@ -82,6 +98,7 @@ func (b *bloomFilter) Save() {
 	wg.Wait()
 }
 
+// Exists checks if the given value is in the bloom filter or not. False positives might occur.
 func (b *bloomFilter) Exists(value []byte) (exists bool, err error) {
 	for _, f := range b.filters {
 		a, b := f.hashValue(&value)
@@ -95,6 +112,7 @@ func (b *bloomFilter) Exists(value []byte) (exists bool, err error) {
 	return
 }
 
+// hashValue takes care of hashing the value that is being stored in the bloom filter.
 func (f *filter) hashValue(value *[]byte) (a, b uint) {
 	f.hasher.Reset()
 	f.hasher.Write(*value)
