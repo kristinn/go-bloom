@@ -1,6 +1,7 @@
 package bloom
 
 import (
+	"fmt"
 	"github.com/kristinn/redigo/redis"
 	"testing"
 )
@@ -11,6 +12,7 @@ func newRedisConnection() (redis.Conn, error) {
 
 func TestRedisInit(t *testing.T) {
 	pool := redis.NewPool(newRedisConnection, 5)
+	defer pool.Close()
 
 	_, err := NewRedis(pool, "redis-init-test", 15000, 7)
 	if err != nil {
@@ -25,6 +27,7 @@ func TestRedisInit(t *testing.T) {
 
 func TestRedisSave(t *testing.T) {
 	pool := redis.NewPool(newRedisConnection, 5)
+	defer pool.Close()
 
 	r, err := NewRedis(pool, "redis-save-test", 15000, 7)
 	if err != nil {
@@ -77,4 +80,43 @@ func TestBitsetSave(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func BenchmarkRedisQueueAppend(b *testing.B) {
+	pool := redis.NewPool(newRedisConnection, 7)
+	defer pool.Close()
+
+	r, err := NewRedis(pool, "redis-queue-append-benchmark", 15000, 7)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	for i := 0; i < b.N; i++ {
+		r.Append([]byte(fmt.Sprintf("afi.%d", i)))
+	}
+
+	conn := pool.Get()
+	defer conn.Close()
+
+	conn.Do("FLUSHALL")
+}
+
+func BenchmarkRedisSave(b *testing.B) {
+	pool := redis.NewPool(newRedisConnection, 7)
+	defer pool.Close()
+
+	r, err := NewRedis(pool, "redis-save-benchmark", 15000, 7)
+	if err != nil {
+		b.Fatal(err)
+	}
+
+	for i := 0; i < b.N; i++ {
+		r.Append([]byte(fmt.Sprintf("afi.%d", i)))
+		r.Save()
+	}
+
+	conn := pool.Get()
+	defer conn.Close()
+
+	conn.Do("FLUSHALL")
 }
