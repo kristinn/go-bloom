@@ -120,3 +120,20 @@ func BenchmarkRedisSave(b *testing.B) {
 
 	conn.Do("FLUSHALL")
 }
+
+func BenchmarkBitsetAppend(b *testing.B) {
+	bits := NewBitset(15000, 7)
+
+	for i := 0; i < b.N; i++ {
+		bits.Append([]byte(fmt.Sprintf("afi.%d", i)))
+	}
+}
+
+func BenchmarkBitsetSave(b *testing.B) {
+	bits := NewBitset(15000, 7)
+
+	for i := 0; i < b.N; i++ {
+		bits.Append([]byte(fmt.Sprintf("afi.%d", i)))
+		bits.Save()
+	}
+}
