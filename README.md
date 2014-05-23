@@ -7,5 +7,6 @@ This is **WORK IN PROGRESS! DO NOT USE THIS YET!**
 - Cleanup
 - Better and more consistent API
 - Comments
+- More tests!
 - Benchmarks
 - Nice readme
