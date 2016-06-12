@@ -19,8 +19,8 @@ import (
 	"sync"
 )
 
-// BloomFilter holds all the storage filters.
-type BloomFilter struct {
+// bloomFilter holds all the storage filters.
+type bloomFilter struct {
 	filters []filter
 }
 
@@ -33,7 +33,7 @@ type filter struct {
 }
 
 // NewBitset creates and returns a new bloom filter using Bitset as a backend.
-func NewBitset(size, hashIter uint) *BloomFilter {
+func NewBitset(size, hashIter uint) *bloomFilter {
 	filters := filterSetup(size, hashIter)
 
 	for index, filter := range filters {
@@ -41,14 +41,14 @@ func NewBitset(size, hashIter uint) *BloomFilter {
 		filters[index] = filter
 	}
 
-	return &BloomFilter{filters}
+	return &bloomFilter{filters}
 }
 
 // NewRedis creates and returns a new bloom filter using Redis as a backend.
-func NewRedis(pool *redis.Pool, key string, size, hashIter uint) (*BloomFilter, error) {
+func NewRedis(pool *redis.Pool, key string, size, hashIter uint) (*bloomFilter, error) {
 	filters := filterSetup(size, hashIter)
 
-	bloom := BloomFilter{filters}
+	bloom := bloomFilter{filters}
 
 	var err error
 	for index, filter := range bloom.filters {
@@ -76,7 +76,7 @@ func filterSetup(size, hashIter uint) (filters []filter) {
 }
 
 // Append is used to append a value to the queue.
-func (b *BloomFilter) Append(value []byte) {
+func (b *bloomFilter) Append(value []byte) {
 	for _, f := range b.filters {
 		a, b := f.hashValue(&value)
 		f.storage.Append((a + b*f.multiplier) % f.size)
@@ -84,7 +84,7 @@ func (b *BloomFilter) Append(value []byte) {
 }
 
 // Save takes care of saving the values from the queue to the correct backend.
-func (b *BloomFilter) Save() {
+func (b *bloomFilter) Save() {
 	var wg sync.WaitGroup
 	for _, f := range b.filters {
 		wg.Add(1)
@@ -99,7 +99,7 @@ func (b *BloomFilter) Save() {
 }
 
 // Exists checks if the given value is in the bloom filter or not. False positives might occur.
-func (b *BloomFilter) Exists(value []byte) (exists bool, err error) {
+func (b *bloomFilter) Exists(value []byte) (exists bool, err error) {
 	for _, f := range b.filters {
 		a, b := f.hashValue(&value)
 		exists, err = f.storage.Exists((a + b*f.multiplier) % f.size)
