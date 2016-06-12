@@ -4,8 +4,8 @@ import (
 	"github.com/garyburd/redigo/redis"
 )
 
-// redisStorage is a struct representing the Redis backend for the bloom filter.
-type redisStorage struct {
+// RedisStorage is a struct representing the Redis backend for the bloom filter.
+type RedisStorage struct {
 	pool  *redis.Pool
 	key   string
 	size  uint
@@ -13,10 +13,10 @@ type redisStorage struct {
 }
 
 // NewRedisStorage creates a Redis backend storage to be used with the bloom filter.
-func NewRedisStorage(pool *redis.Pool, key string, size uint) (*redisStorage, error) {
+func NewRedisStorage(pool *redis.Pool, key string, size uint) (*RedisStorage, error) {
 	var err error
 
-	store := redisStorage{pool, key, size, make([]uint, 0)}
+	store := RedisStorage{pool, key, size, make([]uint, 0)}
 
 	conn := store.pool.Get()
 	defer conn.Close()
@@ -35,7 +35,7 @@ func NewRedisStorage(pool *redis.Pool, key string, size uint) (*redisStorage, er
 }
 
 // init takes care of settings every bit to 0 in the Redis bitset.
-func (s *redisStorage) init() (err error) {
+func (s *RedisStorage) init() (err error) {
 	conn := s.pool.Get()
 	defer conn.Close()
 
@@ -50,12 +50,12 @@ func (s *redisStorage) init() (err error) {
 }
 
 // Append appends the bit, which is to be saved, to the queue.
-func (s *redisStorage) Append(bit uint) {
+func (s *RedisStorage) Append(bit uint) {
 	s.queue = append(s.queue, bit)
 }
 
 // Save pushes the bits from the queue to the storage backend, assigning the value 1 in the process.
-func (s *redisStorage) Save() {
+func (s *RedisStorage) Save() {
 	conn := s.pool.Get()
 	defer conn.Close()
 
@@ -67,7 +67,7 @@ func (s *redisStorage) Save() {
 }
 
 // Exists checks if the given bit exists in the Redis backend.
-func (s *redisStorage) Exists(bit uint) (ret bool, err error) {
+func (s *RedisStorage) Exists(bit uint) (ret bool, err error) {
 	conn := s.pool.Get()
 	defer conn.Close()
 
