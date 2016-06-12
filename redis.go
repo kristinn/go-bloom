@@ -1,7 +1,7 @@
 package bloom
 
 import (
-	"github.com/kristinn/redigo/redis"
+	"github.com/garyburd/redigo/redis"
 )
 
 // redisStorage is a struct representing the Redis backend for the bloom filter.
@@ -39,13 +39,12 @@ func (s *redisStorage) init() (err error) {
 	conn := s.pool.Get()
 	defer conn.Close()
 
-	conn.Send("MULTI")
 	var i uint
 	for i = 0; i < s.size; i++ {
 		conn.Send("SETBIT", s.key, i, 0)
 	}
 
-	_, err = conn.Do("EXEC")
+	err = conn.Flush()
 
 	return
 }
@@ -60,12 +59,11 @@ func (s *redisStorage) Save() {
 	conn := s.pool.Get()
 	defer conn.Close()
 
-	conn.Send("MULTI")
 	for _, bit := range s.queue {
 		conn.Send("SETBIT", s.key, bit, 1)
 	}
 
-	conn.Do("EXEC")
+	conn.Flush()
 }
 
 // Exists checks if the given bit exists in the Redis backend.

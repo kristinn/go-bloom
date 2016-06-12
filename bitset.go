@@ -1,7 +1,7 @@
 package bloom
 
 import (
-	"github.com/kristinn/bitset"
+	"github.com/willf/bitset"
 )
 
 // bitsetStorage is a struct representing the Bitset backend for the bloom filter.

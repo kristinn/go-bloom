@@ -2,16 +2,24 @@ package bloom
 
 import (
 	"fmt"
-	"github.com/kristinn/redigo/redis"
+	"github.com/garyburd/redigo/redis"
+	"os"
 	"testing"
+	"time"
 )
 
-func newRedisConnection() (redis.Conn, error) {
-	return redis.Dial("tcp", ":6379")
+func newRedisPool(maxIdle int) *redis.Pool {
+	return &redis.Pool{
+		MaxIdle:     maxIdle,
+		IdleTimeout: 240 * time.Second,
+		Dial: func() (redis.Conn, error) {
+			return redis.Dial("tcp", fmt.Sprintf("%s:6379", os.Getenv("REDIS_HOST")))
+		},
+	}
 }
 
 func TestRedisInit(t *testing.T) {
-	pool := redis.NewPool(newRedisConnection, 5)
+	pool := newRedisPool(5)
 	defer pool.Close()
 
 	_, err := NewRedis(pool, "redis-init-test", 15000, 7)
@@ -26,7 +34,7 @@ func TestRedisInit(t *testing.T) {
 }
 
 func TestRedisSave(t *testing.T) {
-	pool := redis.NewPool(newRedisConnection, 5)
+	pool := newRedisPool(5)
 	defer pool.Close()
 
 	r, err := NewRedis(pool, "redis-save-test", 15000, 7)
@@ -83,7 +91,7 @@ func TestBitsetSave(t *testing.T) {
 }
 
 func BenchmarkRedisQueueAppend(b *testing.B) {
-	pool := redis.NewPool(newRedisConnection, 7)
+	pool := newRedisPool(7)
 	defer pool.Close()
 
 	r, err := NewRedis(pool, "redis-queue-append-benchmark", 15000, 7)
@@ -102,7 +110,7 @@ func BenchmarkRedisQueueAppend(b *testing.B) {
 }
 
 func BenchmarkRedisSave(b *testing.B) {
-	pool := redis.NewPool(newRedisConnection, 7)
+	pool := newRedisPool(7)
 	defer pool.Close()
 
 	r, err := NewRedis(pool, "redis-save-benchmark", 15000, 7)
@@ -112,8 +120,8 @@ func BenchmarkRedisSave(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		r.Append([]byte(fmt.Sprintf("afi.%d", i)))
-		r.Save()
 	}
+	r.Save()
 
 	conn := pool.Get()
 	defer conn.Close()
@@ -122,7 +130,7 @@ func BenchmarkRedisSave(b *testing.B) {
 }
 
 func BenchmarkRedisExists(b *testing.B) {
-	pool := redis.NewPool(newRedisConnection, 7)
+	pool := newRedisPool(7)
 	defer pool.Close()
 
 	r, err := NewRedis(pool, "redis-exists-benchmark", 15000, 7)
@@ -130,17 +138,19 @@ func BenchmarkRedisExists(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	for i := 0; i < 15000; i++ {
+	for i := 0; i < b.N; i++ {
 		r.Append([]byte(fmt.Sprintf("afi.%d", i)))
 	}
 	r.Save()
 
-	for i := 0; i < b.N; i++ {
-		r.Exists([]byte("afi.7500"))
-	}
-
 	conn := pool.Get()
 	defer conn.Close()
+
+	conn.Do("FLUSHALL")
+
+	for i := 0; i < b.N; i++ {
+		r.Exists([]byte(fmt.Sprintf("afi.%d", i)))
+	}
 
 	conn.Do("FLUSHALL")
 }
@@ -158,8 +168,8 @@ func BenchmarkBitsetSave(b *testing.B) {
 
 	for i := 0; i < b.N; i++ {
 		bits.Append([]byte(fmt.Sprintf("afi.%d", i)))
-		bits.Save()
 	}
+	bits.Save()
 }
 
 func BenchmarkBitsetExists(b *testing.B) {
