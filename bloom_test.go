@@ -138,9 +138,7 @@ func BenchmarkRedisExists(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	for i := 0; i < b.N; i++ {
-		r.Append([]byte(fmt.Sprintf("afi.%d", i)))
-	}
+	r.Append([]byte("afi.7500"))
 	r.Save()
 
 	conn := pool.Get()
@@ -149,7 +147,7 @@ func BenchmarkRedisExists(b *testing.B) {
 	conn.Do("FLUSHALL")
 
 	for i := 0; i < b.N; i++ {
-		r.Exists([]byte(fmt.Sprintf("afi.%d", i)))
+		r.Exists([]byte("afi.7500"))
 	}
 
 	conn.Do("FLUSHALL")
@@ -175,9 +173,7 @@ func BenchmarkBitsetSave(b *testing.B) {
 func BenchmarkBitsetExists(b *testing.B) {
 	bits := NewBitset(15000, 7)
 
-	for i := 0; i < 15000; i++ {
-		bits.Append([]byte(fmt.Sprintf("afi.%d", i)))
-	}
+	bits.Append([]byte("afi.7500"))
 	bits.Save()
 
 	for i := 0; i < b.N; i++ {
