@@ -1,5 +1,7 @@
 # Bloom filter
 
+[![godoc](https://godoc.org/github.com/kristinn/go-bloom?status.svg "godoc")](https://godoc.org/github.com/kristinn/go-bloom)
+
 Golang bloom filter library with support for both bitset and redis backends.
 
 ## Tests and benchmarks
